@@ -1,0 +1,25 @@
+# AURIX / ADS 构建产物
+Debug/
+Release/
+*.o
+*.obj
+*.d
+*.elf
+*.hex
+*.map
+*.lst
+*.a
+*.lib
+*.srec
+
+# IDE
+.settings/
+.metadata/
+*.launch
+.cproject
+.project
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store
