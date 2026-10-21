@@ -3,7 +3,7 @@
 #include "image.h"
 #include "wifi.h"
 
-//ºê¶¨Òå
+//å®å®šä¹‰
 #define MIT_A (ATOM1_CH1_P33_9)
 #define MIT_B (ATOM1_CH2_P33_11)
 #define MIT_C (ATOM1_CH5_P32_4)
@@ -12,40 +12,40 @@
 #define UP_LIMIT (100)
 #define DOWN_LIMIT (-100)
 #define DUOJI_MID (800)
-#define ENC_L_TIM       (TIM2_ENCODER)              //¼ÆÊıÆ÷
-#define ENC_L_A_PIN     (TIM2_ENCODER_CH1_P33_7)    //Âö³å½Å
-#define ENC_L_DIR_PIN   (TIM2_ENCODER_CH2_P33_6)    //·½Ïò½Å
+#define ENC_L_TIM       (TIM2_ENCODER)              //è®¡æ•°å™¨
+#define ENC_L_A_PIN     (TIM2_ENCODER_CH1_P33_7)    //è„‰å†²è„š
+#define ENC_L_DIR_PIN   (TIM2_ENCODER_CH2_P33_6)    //æ–¹å‘è„š
 #define ENC_R_TIM       (TIM6_ENCODER)
 #define ENC_R_A_PIN     (TIM6_ENCODER_CH1_P20_3)
 #define ENC_R_DIR_PIN   (TIM6_ENCODER_CH2_P20_0)
-#define SPEED_SCALE     (100.0f)//»»ËãÏµÊı
-#define DUTY_MAX_RUN    (2000)//·ÀÖ¹·è×ª
-#define DUTY_MIN_RUN    (300)//·ÀÖ¹Ì«Âı
-#define DIFF_K (0.2)//×ªÏòÏµÊı
-volatile uint8 g_lost=1;//ÉÏµçÏÈµ±¶ªÏß£¬·ÀÖ¹Ã»Í¼¾Í·¢³µ
-volatile uint8 g_frame_new=0;//Êä³öĞÂµÄÒ»Ö¡Í¼Ïñ
-volatile uint8 g_image_ready=0;//µÃµ½Ò»Ö¡ĞÂµÄÍ¼Ïñ
+#define SPEED_SCALE     (100.0f)//æ¢ç®—ç³»æ•°
+#define DUTY_MAX_RUN    (2000)//é˜²æ­¢ç–¯è½¬
+#define DUTY_MIN_RUN    (300)//é˜²æ­¢å¤ªæ…¢
+#define DIFF_K (0.2)//è½¬å‘ç³»æ•°
+volatile uint8 g_lost=1;//ä¸Šç”µå…ˆå½“ä¸¢çº¿ï¼Œé˜²æ­¢æ²¡å›¾å°±å‘è½¦
+volatile uint8 g_frame_new=0;//è¾“å‡ºæ–°çš„ä¸€å¸§å›¾åƒ
+volatile uint8 g_image_ready=0;//å¾—åˆ°ä¸€å¸§æ–°çš„å›¾åƒ
 volatile int16 out;
-//´ò°ü½á¹¹Ìå£¬Ğ´µ½º¯ÊıÊ¡ÊÂ
+//æ‰“åŒ…ç»“æ„ä½“ï¼Œå†™åˆ°å‡½æ•°çœäº‹
 typedef struct
 {
-    float Target;//Ä¿±ê
-    float Current;//ÏÖÔÚ
-    float Out;//Êä³ö
-    float Bias_0;//±¾´ÎÆ«²î
-    float Bias_1;//ÉÏ´ÎÆ«²î
-    float Bias_2;//ÉÏÉÏ´ÎÆ«²î
+    float Target;//ç›®æ ‡
+    float Current;//ç°åœ¨
+    float Out;//è¾“å‡º
+    float Bias_0;//æœ¬æ¬¡åå·®
+    float Bias_1;//ä¸Šæ¬¡åå·®
+    float Bias_2;//ä¸Šä¸Šæ¬¡åå·®
     float KP;
     float KI;
     float KD;
 } pid_parameter;
 
-pid_parameter bh_pid_left = {0};//´æ²ÎÊı£¬ÏÈ³õÊ¼»¯
+pid_parameter bh_pid_left = {0};//å­˜å‚æ•°ï¼Œå…ˆåˆå§‹åŒ–
 pid_parameter bh_pid_right = {0};
-//³õÊ¼»¯
+//åˆå§‹åŒ–
 void control_init(void)
 {
-    pwm_init(MIT_A, 20000, 0);//µÚÒ»¸öÖµÊÇÆµÂÊ£¬µÚ¶ş¸öÖµÊÇ³õÊ¼Õ¼¿Õ±È
+    pwm_init(MIT_A, 20000, 0);//ç¬¬ä¸€ä¸ªå€¼æ˜¯é¢‘ç‡ï¼Œç¬¬äºŒä¸ªå€¼æ˜¯åˆå§‹å ç©ºæ¯”
     pwm_init(MIT_B, 20000, 0);
     pwm_init(MIT_C, 20000, 0);
     pwm_init(MIT_D, 20000, 0);
@@ -54,23 +54,23 @@ void control_init(void)
     encoder_dir_init(ENC_R_TIM, ENC_R_A_PIN, ENC_R_DIR_PIN);
     encoder_clear_count(ENC_L_TIM);
     encoder_clear_count(ENC_R_TIM);
-//¶¨Ê±Æ÷ÖĞ¶Ï³õÊ¼»¯£¬¸øµç»úÓÃ
+//å®šæ—¶å™¨ä¸­æ–­åˆå§‹åŒ–ï¼Œç»™ç”µæœºç”¨
 pit_init(CCU60_CH0,5000);
 }
-//¶æ»úº¯Êı_¶ªÏß±£»¤_ÏŞ·ù±£»¤
+//èˆµæœºå‡½æ•°_ä¸¢çº¿ä¿æŠ¤_é™å¹…ä¿æŠ¤
 void ImageMain(void)
 {   static int last_err=0;
-    static uint8 ever_found=0;  //ÊÇ·ñÔø¾­³É¹¦ÕÒµ½¹ıÏß
+    static uint8 ever_found=0;  //æ˜¯å¦æ›¾ç»æˆåŠŸæ‰¾åˆ°è¿‡çº¿
     g_frame_new=1;
     g_image_ready=1;
     int err;
     int err_sum=0;
     int err_each;
-    int cha;//Æ«²îÖµ
+    int cha;//åå·®å€¼
     int n=0;
 
     int r;
-    for(r=35;r<=60;r++)//¶ªÏß±£»¤ºÍ¶àĞĞÆ½¾ù
+    for(r=35;r<=60;r++)//ä¸¢çº¿ä¿æŠ¤å’Œå¤šè¡Œå¹³å‡
     {
         if(mid_line[r]!=255)
         {
@@ -90,13 +90,13 @@ void ImageMain(void)
     if(ever_found==0)
     {
         ever_found=1;
-        g_lost=0;//ÏÈÈÃ³µÅÜ£¬Ö»ÒªÊÇn<4ÁË£¬g_lostµÄÖµ¾ÍÓÀÔ¶²»»áÊÇ0ÁË£¬Ò²¾ÍÊÇÖ»Òª¶ªÏß£¬³µ¾ÍÓÀÔ¶²»ÅÜÁË
+        g_lost=0;//å…ˆè®©è½¦è·‘ï¼Œåªè¦æ˜¯n<4äº†ï¼Œg_lostçš„å€¼å°±æ°¸è¿œä¸ä¼šæ˜¯0äº†ï¼Œä¹Ÿå°±æ˜¯åªè¦ä¸¢çº¿ï¼Œè½¦å°±æ°¸è¿œä¸è·‘äº†
     }
     err=err_sum/n;
     cha=err-last_err;
     last_err=err;
     int dj_out=(menu_get_param(0)*err+menu_get_param(2)*cha)/1000;
-    if(dj_out>=UP_LIMIT)//ÏŞ·ù±£»¤
+    if(dj_out>=UP_LIMIT)//é™å¹…ä¿æŠ¤
     {
         dj_out=UP_LIMIT;
     }
@@ -105,11 +105,11 @@ void ImageMain(void)
         dj_out=DOWN_LIMIT;
     }
 
-    pwm_set_duty(DUOJI,DUOJI_MID-dj_out);//¶æ»úÊä³ö¹«Ê½   out>0,¶æ»úÍùÓÒÆ«£¬out<0£¬¶æ»úÍù×óÆ«
+    pwm_set_duty(DUOJI,DUOJI_MID-dj_out);//èˆµæœºè¾“å‡ºå…¬å¼   out>0,èˆµæœºå¾€å³åï¼Œout<0ï¼Œèˆµæœºå¾€å·¦å
     out=(int16)dj_out;
 
 }
-//´æÖµº¯Êı_ÇåÁãº¯Êı_¸¡µãÊıÏòÕûÊı×ª»»º¯Êı£¨Êä³öËÙ¶È£©
+//å­˜å€¼å‡½æ•°_æ¸…é›¶å‡½æ•°_æµ®ç‚¹æ•°å‘æ•´æ•°è½¬æ¢å‡½æ•°ï¼ˆè¾“å‡ºé€Ÿåº¦ï¼‰
 void getvalue(pid_parameter *pid)
 {
     pid->Bias_2=pid->Bias_1;
@@ -139,13 +139,13 @@ static uint32 transout(pid_parameter *pid)
     }
     else if(pid->Out < (float)DUTY_MIN_RUN)
     {
-        return DUTY_MIN_RUN;                        // ËÀÇøÖ»°ÑÊä³öµæÉÏÀ´£¬²»»ØĞ´ Out
+        return DUTY_MIN_RUN;                        // æ­»åŒºåªæŠŠè¾“å‡ºå«ä¸Šæ¥ï¼Œä¸å›å†™ Out
     }
 
     return (uint32)pid->Out;
 }
 
-//µç»ú×ª¶¯_¶ªÏß±£»¤
+//ç”µæœºè½¬åŠ¨_ä¸¢çº¿ä¿æŠ¤
 void CtrlMain(void)
 {
     float x=DIFF_K*out/100.0f;
@@ -158,16 +158,16 @@ void CtrlMain(void)
         x=-0.5f;
     }
     float base_speed=(float)menu_get_param(3)/SPEED_SCALE;
-    int16 bh_speed_left= encoder_get_count(ENC_L_TIM);//¶Á¼ÆÊıÆ÷µÄÖµ
+    int16 bh_speed_left= encoder_get_count(ENC_L_TIM);//è¯»è®¡æ•°å™¨çš„å€¼
     int16 bh_speed_right= encoder_get_count(ENC_R_TIM);
-    encoder_clear_count(ENC_L_TIM);//¶ÁÍêÇåÁã
+    encoder_clear_count(ENC_L_TIM);//è¯»å®Œæ¸…é›¶
     encoder_clear_count(ENC_R_TIM);
-    bh_pid_left.Current=bh_speed_left;//Ä¿Ç°ËÙ¶È
+    bh_pid_left.Current=bh_speed_left;//ç›®å‰é€Ÿåº¦
     bh_pid_right.Current=bh_speed_right;
     bh_pid_left.Target=(1+x)*base_speed;
     bh_pid_left.KP=(float)menu_get_param(4)/1000.0f;
     bh_pid_left.KI=(float)menu_get_param(1)/1000.0f;
-    bh_pid_left.KD=0.0f;//ÔöÁ¿Ê½pi£¬²»ÓÃd
+    bh_pid_left.KD=0.0f;//å¢é‡å¼piï¼Œä¸ç”¨d
     bh_pid_right.Target=(1-x)*base_speed;
     bh_pid_right.KP=bh_pid_left.KP;
     bh_pid_right.KI=bh_pid_left.KI;
@@ -186,15 +186,15 @@ void CtrlMain(void)
     if(menu_run_flag==1 && diuxian_dushu>=200 && g_lost==0)
     {
 
-        getvalue(&bh_pid_left);//ÊäÈë²ÎÊı
+        getvalue(&bh_pid_left);//è¾“å…¥å‚æ•°
         getvalue(&bh_pid_right);
 
-        dianjizhuandong(transout(&bh_pid_left),transout(&bh_pid_right));//ÊäÈëËÙ¶È
+        dianjizhuandong(transout(&bh_pid_left),transout(&bh_pid_right));//è¾“å…¥é€Ÿåº¦
     }
     else
     {
         dianjizhuandong(0,0);
-        deletevalue(&bh_pid_left);//Ö»ÒªÍ£ÁË£¬ÂíÉÏÇåÁã
+        deletevalue(&bh_pid_left);//åªè¦åœäº†ï¼Œé©¬ä¸Šæ¸…é›¶
         deletevalue(&bh_pid_right);
 
     }
@@ -203,8 +203,8 @@ void CtrlMain(void)
     {
         float wave[3];
         wave[0] = bh_pid_left.Target;
-        wave[1] = bh_pid_left.Current;     // ÍâÂÖÊµ¼ÊËÙ¶È
-        wave[2] = bh_pid_right.Current;    // ÄÚÂÖÊµ¼ÊËÙ¶È
+        wave[1] = bh_pid_left.Current;     // å¤–è½®å®é™…é€Ÿåº¦
+        wave[2] = bh_pid_right.Current;    // å†…è½®å®é™…é€Ÿåº¦
         SendDataToScope(WIFI_UART, wave, 3);
     }
 
